@@ -24,16 +24,17 @@ samplelist = ["HH_ggTauTau", "VBF_HH_ggTauTau", "Data"]
 #samplelist = ["Data"]
 fileset = job_utils.make_fileset(samplelist, ["2016","2017","2018"], use_xrootd=True) 
 #outdfname = "test_VBFyields_withdata.parquet" 
-outpath = "/hadoop/cms/store/user/hmei/workflowtest/dask_coffea"
+outpath = "/work/gallim/devel/HiggsDNA_studies/out"
 jobtag = "test"
 
+from dask_jobqueue import SLURMCluster
 from dask.distributed import Client
 #client = Client(memory_limit='2GB', n_workers=5, threads_per_worker=1)
-client = Client("tcp://169.228.130.37:12318")
+#client = Client("tcp://169.228.130.37:12318")
 
 localfiles = ["./processors.py", "./utils.py", "./data/samples_and_scale1fb_HHggTauTau.json"]
-for localfile in localfiles:
-    client.upload_file(localfile)
+#for localfile in localfiles:
+    #client.upload_file(localfile)
 
 logger.debug(f"fileset: {fileset}")
 
@@ -55,15 +56,18 @@ def run(useNanoEvents):
     else:
 
 
-        out = processor.run_uproot_job(
-            fileset,
-            treename = 'Events',
-            processor_instance = VBFHHggtautauProcessor(outpath, jobtag),
-            #executor=processor.futures_executor,
-            #executor_args={"schema": None, "workers": 3, "use_dataframes": True}, # our skim only works with None if we want to use selectedPhoton..
-            executor=processor.dask_executor,
-            executor_args={"schema": None, "client": client, "use_dataframes": True},
-            )
+        with SLURMCluster(cores=2, memory="4G") as cluster:
+            with Client(cluster) as client:
+                cluster.scale(200)
+                out = processor.run_uproot_job(
+                    fileset,
+                    treename = 'Events',
+                    processor_instance = VBFHHggtautauProcessor(outpath, jobtag),
+                    #executor=processor.futures_executor,
+                    #executor_args={"schema": None, "workers": 3, "use_dataframes": True}, # our skim only works with None if we want to use selectedPhoton..
+                    executor=processor.dask_executor,
+                    executor_args={"schema": None, "client": client, "use_dataframes": True},
+                    )
 
         #logger.debug(f"columns: {out.columns}")
         #logger.debug(f"head of df: {out.head()}")

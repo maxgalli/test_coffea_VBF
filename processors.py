@@ -142,7 +142,7 @@ class VBFHHggtautauProcessor(processor.ProcessorABC):
         job_id = f"{output['diphoton_mass'][0]}_{time.time()}_{random.random()}_{dataset}"
 
         localoutputname = f"out-{self.job_tag}-{job_id}.parquet"
-        output[ak.to_numpy(all_cuts)].to_parquet(f"./{localoutputname}")
+        output[ak.to_numpy(all_cuts)].to_parquet(f"{self.output_path}/{localoutputname}")
 
         cmd_gfal_copy = f"env -i X509_USER_PROXY=${{X509_USER_PROXY}} gfal-copy -p -f -t 4200 --verbose file://`pwd`/{localoutputname} gsiftp://gftp.t2.ucsd.edu/{self.output_path}/{localoutputname} --checksum ADLER32"
         call(cmd_gfal_copy, shell=True)
